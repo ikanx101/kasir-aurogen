@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Login Admin — Dapoerasatoe{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
+    <div class="text-center mb-6">
+      <div class="text-5xl mb-3">🔐</div>
+      <h2 class="text-2xl font-bold text-brand-800">Login Admin</h2>
+      <p class="text-gray-500 text-sm mt-1">Dapoerasatoe</p>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/login" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password Admin</label>
+        <input
+          type="password"
+          name="password"
+          autofocus
+          required
+          placeholder="Masukkan password..."
+          class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+        />
+      </div>
+      <button
+        type="submit"
+        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-lg transition"
+      >
+        Masuk
+      </button>
+    </form>
+
+    <div class="mt-4 text-center">
+      <a href="/" class="text-sm text-brand-600 hover:underline">← Kembali ke Beranda</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

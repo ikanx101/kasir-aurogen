@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Pilih Event — Kasir Dapoerasatoe{% endblock %}
+
+{% block nav %}
+<a href="/" class="px-3 py-1.5 rounded hover:bg-brand-600 transition">Beranda</a>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex flex-col items-center justify-center py-8">
+  <div class="text-center mb-8">
+    <div class="text-5xl mb-3">🧾</div>
+    <h2 class="text-3xl font-bold text-brand-800">Mode Kasir</h2>
+    <p class="text-gray-500 mt-2">Pilih event untuk mulai bertransaksi</p>
+  </div>
+
+  {% if events %}
+  <div class="w-full max-w-lg space-y-4">
+    {% for ev in events %}
+    <a href="/kasir/pos/{{ ev.id }}"
+       class="group block bg-white border-2 border-brand-200 hover:border-brand-500 rounded-2xl p-6 shadow hover:shadow-xl transition-all duration-200">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-green-500 text-lg">●</span>
+            <h3 class="text-lg font-bold text-brand-800">{{ ev.name }}</h3>
+          </div>
+          <p class="text-sm text-gray-500 mt-1 ml-6">
+            {{ ev.start_date.strftime('%d %b') }} — {{ ev.end_date.strftime('%d %b %Y') }}
+          </p>
+        </div>
+        <span class="text-brand-500 text-2xl group-hover:translate-x-1 transition-transform">→</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white rounded-2xl shadow p-12 text-center border border-dashed border-brand-200 max-w-lg w-full">
+    <div class="text-5xl mb-4">😔</div>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">Tidak Ada Event Aktif</h3>
+    <p class="text-gray-500 text-sm">Minta admin untuk mengaktifkan event terlebih dahulu.</p>
+    <a href="/" class="inline-block mt-4 text-brand-600 hover:underline text-sm">← Kembali ke Beranda</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

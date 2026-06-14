@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Kasir Dapoerasatoe{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#fdf8f0',
+              100: '#fef3c7',
+              200: '#fde68a',
+              300: '#fbbf24',
+              400: '#f59e0b',
+              500: '#d97706',
+              600: '#b45309',
+              700: '#92400e',
+              800: '#78350f',
+              900: '#451a03',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-brand-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-brand-700 text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="/static/logo_utama.jpeg" alt="Dapoerasatoe" class="h-10 w-auto max-w-[80px] object-contain rounded">
+        <div>
+          <h1 class="text-xl font-bold tracking-wide">Dapoerasatoe</h1>
+          <p class="text-brand-200 text-xs">Sistem Kasir Bazaar</p>
+        </div>
+      </div>
+      <nav class="flex items-center gap-2 text-sm">
+        {% block nav %}
+        <a href="/" class="px-3 py-1.5 rounded hover:bg-brand-600 transition">Beranda</a>
+        {% endblock %}
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="{% block main_class %}max-w-7xl mx-auto px-4 py-6{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

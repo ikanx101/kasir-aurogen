@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}{{ event.name }} — Menu{% endblock %}
+
+{% block nav %}
+<a href="/admin/events" class="px-3 py-1.5 rounded hover:bg-brand-600 transition">← Event</a>
+<a href="/admin/rekap" class="px-3 py-1.5 rounded hover:bg-brand-600 transition">Rekap</a>
+<a href="/logout" class="px-3 py-1.5 rounded hover:bg-red-600 transition text-red-200">Keluar</a>
+{% endblock %}
+
+{% block content %}
+<div x-data="{ showAdd: false, editId: null, editName: '', editPrice: 0, editStock: 0 }" class="space-y-6">
+
+  <!-- Event info & edit -->
+  <div class="bg-white rounded-2xl shadow p-6 border border-brand-200">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-brand-800">{{ event.name }}</h2>
+        <p class="text-sm text-gray-500 mt-1">
+          {{ event.start_date.strftime('%d %b %Y') }} — {{ event.end_date.strftime('%d %b %Y') }}
+          &nbsp;·&nbsp;
+          <span class="font-semibold {% if event.is_active %}text-green-600{% else %}text-gray-400{% endif %}">
+            {% if event.is_active %}🟢 Aktif{% else %}⚫ Tidak Aktif{% endif %}
+          </span>
+        </p>
+      </div>
+      <div class="flex gap-2">
+        <form method="POST" action="/admin/events/{{ event.id }}/toggle-active">
+          <button type="submit"
+            class="px-4 py-2 {% if event.is_active %}bg-yellow-100 hover:bg-yellow-200 text-yellow-800{% else %}bg-green-100 hover:bg-green-200 text-green-800{% endif %} rounded-lg text-sm font-medium transition">
+            {% if event.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu management -->
+  <div class="flex items-center justify-between">
+    <h3 class="text-xl font-bold text-brand-800">Daftar Menu ({{ items|length }} item)</h3>
+    <button @click="showAdd = !showAdd"
+      class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold transition">
+      <span x-show="!showAdd">+ Tambah Menu</span>
+      <span x-show="showAdd" x-cloak>✕ Tutup</span>
+    </button>
+  </div>
+
+  <!-- Add menu form -->
+  <div x-show="showAdd" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 -translate-y-2"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       class="bg-white rounded-2xl shadow p-6 border border-brand-200">
+    <h4 class="text-base font-semibold text-brand-700 mb-4">Tambah Item Menu Baru</h4>
+    <form method="POST" action="/admin/events/{{ event.id }}/menu" class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nama SKU</label>
+        <input type="text" name="name" required placeholder="Contoh: Ayam Geprek"
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
+        <input type="number" name="price" required min="0" placeholder="15000"
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Stok</label>
+        <input type="number" name="stock" required min="0" placeholder="50"
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <div class="sm:col-span-4 flex justify-end">
+        <button type="submit"
+          class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg transition">
+          Simpan Item
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Menu items table -->
+  {% if items %}
+  <div class="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-brand-700 text-white">
+        <tr>
+          <th class="text-left px-5 py-3">Nama SKU</th>
+          <th class="text-right px-5 py-3">Harga</th>
+          <th class="text-right px-5 py-3">Stok</th>
+          <th class="text-center px-5 py-3">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for item in items %}
+        <tr class="hover:bg-brand-50 transition" x-data="{}">
+          <td class="px-5 py-4 font-medium text-gray-800">
+            {{ item.name }}
+            {% if item.stock == 0 %}
+            <span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Habis</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-4 text-right text-gray-700">Rp {{ "{:,}".format(item.price).replace(",",".") }}</td>
+          <td class="px-5 py-4 text-right">
+            <span class="font-semibold {% if item.stock == 0 %}text-red-600{% elif item.stock <= 5 %}text-yellow-600{% else %}text-green-700{% endif %}">
+              {{ item.stock }}
+            </span>
+          </td>
+          <td class="px-5 py-4">
+            <div class="flex justify-center gap-2">
+              <!-- Edit button -->
+              <button
+                @click="editId = parseInt($el.dataset.id); editName = $el.dataset.name; editPrice = parseInt($el.dataset.price); editStock = parseInt($el.dataset.stock)"
+                data-id="{{ item.id }}"
+                data-name="{{ item.name }}"
+                data-price="{{ item.price }}"
+                data-stock="{{ item.stock }}"
+                class="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-medium transition">
+                Edit
+              </button>
+              <!-- Delete button -->
+              <form method="POST" action="/admin/menu/{{ item.id }}/delete"
+                    data-name="{{ item.name }}"
+                    onsubmit="return confirm(this.dataset.name + ' — Hapus item ini?')">
+                <button type="submit"
+                  class="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs font-medium transition">
+                  Hapus
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-2xl shadow p-12 text-center border border-dashed border-brand-200">
+    <div class="text-5xl mb-4">🍴</div>
+    <p class="text-gray-500">Belum ada menu. Klik <strong>+ Tambah Menu</strong> untuk mulai.</p>
+  </div>
+  {% endif %}
+
+  <!-- Edit modal -->
+  <div x-show="editId !== null" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+       @keydown.escape.window="editId = null">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md" @click.stop>
+      <h4 class="text-lg font-semibold text-brand-800 mb-4">Edit Menu Item</h4>
+      <form :action="`/admin/menu/${editId}/update`" method="POST" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama SKU</label>
+          <input type="text" name="name" x-model="editName" required
+            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
+            <input type="number" name="price" x-model="editPrice" required min="0"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Stok</label>
+            <input type="number" name="stock" x-model="editStock" required min="0"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" @click="editId = null"
+            class="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition font-medium">
+            Batal
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold transition">
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

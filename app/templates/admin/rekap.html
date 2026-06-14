@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+{% block title %}Rekap & Riwayat — Admin Dapoerasatoe{% endblock %}
+
+{% block nav %}
+<a href="/admin/events" class="px-3 py-1.5 rounded hover:bg-brand-600 transition">Event</a>
+<a href="/admin/rekap" class="px-3 py-1.5 rounded bg-brand-600 font-semibold">Rekap</a>
+<a href="/logout" class="px-3 py-1.5 rounded hover:bg-red-600 transition text-red-200">Keluar</a>
+{% endblock %}
+
+{% block content %}
+<div
+  x-data="rekapApp()"
+  class="space-y-8"
+>
+
+  <h2 class="text-2xl font-bold text-brand-800">Rekap & Riwayat Transaksi</h2>
+
+  <!-- ═══════════════════════════════════════════
+       SECTION 1: Rekap Omset per Event
+  ═══════════════════════════════════════════ -->
+  <section>
+    <h3 class="text-lg font-bold text-brand-700 mb-3 flex items-center gap-2">
+      <span>📊</span> Rekap Omset per Event
+    </h3>
+
+    {% if event_summaries %}
+    <div class="bg-white rounded-2xl shadow overflow-hidden border border-gray-100">
+      <table class="w-full text-sm">
+        <thead class="bg-brand-700 text-white">
+          <tr>
+            <th class="text-left px-5 py-3">Nama Event</th>
+            <th class="text-left px-5 py-3 hidden sm:table-cell">Periode</th>
+            <th class="text-right px-5 py-3">Transaksi</th>
+            <th class="text-right px-5 py-3">Rata-rata</th>
+            <th class="text-right px-5 py-3 font-bold">Total Omset</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% set grand_total = namespace(omset=0, tx=0) %}
+          {% for ev in event_summaries %}
+          {% set grand_total.omset = grand_total.omset + ev.total_omset %}
+          {% set grand_total.tx = grand_total.tx + ev.tx_count %}
+          <tr class="hover:bg-brand-50 transition">
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-2">
+                <span class="{% if ev.is_active %}text-green-500{% else %}text-gray-300{% endif %} text-xs">●</span>
+                <a href="/admin/rekap?event_id={{ ev.id }}"
+                   class="font-medium text-brand-800 hover:underline">{{ ev.name }}</a>
+              </div>
+            </td>
+            <td class="px-5 py-4 text-gray-500 text-xs hidden sm:table-cell">
+              {{ ev.start_date.strftime('%d %b %Y') }} — {{ ev.end_date.strftime('%d %b %Y') }}
+            </td>
+            <td class="px-5 py-4 text-right text-gray-600">{{ ev.tx_count }}</td>
+            <td class="px-5 py-4 text-right text-gray-500 text-xs">
+              {% if ev.tx_count > 0 %}{{ format_rupiah(ev.total_omset // ev.tx_count) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-5 py-4 text-right font-bold text-brand-700 text-base">
+              {{ format_rupiah(ev.total_omset) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="bg-brand-50 border-t-2 border-brand-200">
+          <tr>
+            <td class="px-5 py-3 font-bold text-brand-800" colspan="2">TOTAL KESELURUHAN</td>
+            <td class="px-5 py-3 text-right font-semibold text-brand-700">{{ grand_total.tx }}</td>
+            <td class="px-5 py-3 text-right text-gray-500 text-xs">
+              {% if grand_total.tx > 0 %}{{ format_rupiah(grand_total.omset // grand_total.tx) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-5 py-3 text-right font-bold text-brand-800 text-lg">
+              {{ format_rupiah(grand_total.omset) }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-2xl shadow p-10 text-center border border-dashed border-brand-200">
+      <div class="text-4xl mb-3">📋</div>
+      <p class="text-gray-500">Belum ada event.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       SECTION 2: Riwayat Transaksi
+  ═══════════════════════════════════════════ -->
+  <section>
+    <h3 class="text-lg font-bold text-brand-700 mb-3 flex items-center gap-2">
+      <span>🧾</span> Riwayat Transaksi
+    </h3>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-2xl shadow p-5 border border-gray-100 mb-4">
+      <form method="GET" action="/admin/rekap" class="flex flex-wrap gap-4 items-end">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Filter Event</label>
+          <select name="event_id"
+            class="border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+            <option value="">Semua Event</option>
+            {% for ev in events %}
+            <option value="{{ ev.id }}" {% if selected_event_id == ev.id %}selected{% endif %}>{{ ev.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Filter Tanggal</label>
+          <input type="date" name="date_filter" value="{{ date_filter }}"
+            class="border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm" />
+        </div>
+        <div class="flex gap-2">
+          <button type="submit"
+            class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold text-sm transition">
+            Tampilkan
+          </button>
+          <a href="/admin/rekap"
+            class="px-5 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Rekap harian (hanya jika filter tanggal aktif) -->
+    {% if recap_data %}
+    <div class="bg-gradient-to-br from-brand-600 to-brand-800 rounded-2xl shadow p-6 text-white mb-4">
+      <h4 class="text-sm font-semibold opacity-80 mb-1">Rekap Harian</h4>
+      <p class="text-brand-200 text-xs mb-4">{{ recap_date.strftime('%d %B %Y') }}</p>
+      <div class="grid grid-cols-3 gap-3 mb-5">
+        <div class="bg-white/10 rounded-xl p-3 md:p-4">
+          <p class="text-brand-200 text-xs uppercase tracking-wide mb-1">Total Omset</p>
+          <p class="text-base md:text-xl font-bold">{{ format_rupiah(recap_data.omset) }}</p>
+        </div>
+        <div class="bg-white/10 rounded-xl p-3 md:p-4">
+          <p class="text-brand-200 text-xs uppercase tracking-wide mb-1">Transaksi</p>
+          <p class="text-base md:text-xl font-bold">{{ recap_data.n_tx }}</p>
+        </div>
+        <div class="bg-white/10 rounded-xl p-3 md:p-4">
+          <p class="text-brand-200 text-xs uppercase tracking-wide mb-1">Rata-rata</p>
+          <p class="text-base md:text-xl font-bold">{{ format_rupiah(recap_data.avg_tx) }}</p>
+        </div>
+      </div>
+      {% if recap_data.top_items %}
+      <div>
+        <p class="text-xs font-semibold opacity-70 mb-2">🏆 Top 5 Terlaris</p>
+        <div class="space-y-1.5">
+          {% for it in recap_data.top_items %}
+          <div class="flex items-center justify-between bg-white/10 rounded-lg px-3 py-1.5 text-sm">
+            <span>{{ loop.index }}. {{ it.name }}</span>
+            <span class="text-brand-200 text-xs">{{ it.qty }}× · {{ format_rupiah(it.revenue) }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Tabel transaksi -->
+    {% if transactions %}
+    <div class="bg-white rounded-2xl shadow overflow-hidden border border-gray-100">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-brand-700 text-white">
+            <tr>
+              <th class="text-left px-5 py-3">No. Transaksi</th>
+              <th class="text-left px-5 py-3 hidden sm:table-cell">Event</th>
+              <th class="text-left px-5 py-3">Waktu</th>
+              <th class="text-right px-5 py-3">Total</th>
+              <th class="text-center px-5 py-3">Detail</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for tx in transactions %}
+            <tr class="hover:bg-brand-50 transition">
+              <td class="px-5 py-3 font-mono text-xs text-brand-700 font-semibold">
+                {{ tx.transaction_number }}
+              </td>
+              <td class="px-5 py-3 text-gray-600 hidden sm:table-cell">
+                {{ tx.event.name if tx.event else '(event dihapus)' }}
+              </td>
+              <td class="px-5 py-3 text-gray-500 text-xs whitespace-nowrap">
+                {{ tx.created_at.strftime('%d/%m/%Y %H:%M') }}
+              </td>
+              <td class="px-5 py-3 text-right font-semibold text-brand-700">
+                {{ format_rupiah(tx.total) }}
+              </td>
+              <td class="px-5 py-3 text-center">
+                <button
+                  @click="openDetail({{ tx.id }})"
+                  class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-700 rounded-lg text-xs font-medium transition">
+                  Lihat
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if transactions|length >= 200 %}
+    <p class="text-xs text-amber-600 text-center mt-2 bg-amber-50 border border-amber-200 rounded-lg py-2 px-4">
+      Menampilkan 200 transaksi terbaru. Gunakan filter event atau tanggal untuk mempersempit hasil.
+    </p>
+    {% endif %}
+    {% else %}
+    <div class="bg-white rounded-2xl shadow p-12 text-center border border-dashed border-brand-200">
+      <div class="text-4xl mb-3">🧾</div>
+      <p class="text-gray-500">Belum ada transaksi untuk filter ini.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       MODAL: Detail Transaksi
+  ═══════════════════════════════════════════ -->
+  <div x-show="detail !== null" x-cloak
+       class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+       @click="!editing && (detail = null)"
+       @keydown.escape.window="detail = null; editing = false">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
+
+      <!-- Loading state -->
+      <div x-show="loadingDetail" class="p-12 text-center">
+        <div class="text-4xl mb-3 animate-spin inline-block">⟳</div>
+        <p class="text-gray-500">Memuat detail...</p>
+      </div>
+
+      <!-- Detail content -->
+      <div x-show="detail && !loadingDetail" x-cloak>
+        <!-- Header -->
+        <div class="bg-brand-700 text-white rounded-t-2xl px-6 py-4">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-brand-200 text-xs mb-1">No. Transaksi</p>
+              <p class="font-bold font-mono" x-text="detail?.transaction_number"></p>
+              <p class="text-brand-200 text-xs mt-1" x-text="detail?.event_name"></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span x-show="editing" class="text-xs bg-yellow-400 text-yellow-900 font-semibold px-2 py-0.5 rounded">MODE EDIT</span>
+              <button @click="detail = null; editing = false" class="text-brand-200 hover:text-white text-2xl leading-none">✕</button>
+            </div>
+          </div>
+          <p class="text-brand-200 text-xs mt-2" x-text="detail?.created_at"></p>
+        </div>
+
+        <!-- VIEW MODE: Items table -->
+        <div x-show="!editing" class="px-6 py-4">
+          <table class="w-full text-sm mb-4">
+            <thead>
+              <tr class="border-b border-gray-200 text-gray-400 text-xs uppercase">
+                <th class="text-left pb-2">Item</th>
+                <th class="text-center pb-2">Qty</th>
+                <th class="text-right pb-2">Harga</th>
+                <th class="text-right pb-2">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <template x-for="item in detail?.items" :key="item.id">
+                <tr>
+                  <td class="py-2 text-gray-800 font-medium" x-text="item.name"></td>
+                  <td class="py-2 text-center text-gray-500" x-text="item.qty"></td>
+                  <td class="py-2 text-right text-gray-500" x-text="'Rp ' + formatRupiah(item.price)"></td>
+                  <td class="py-2 text-right font-medium text-brand-700" x-text="'Rp ' + formatRupiah(item.subtotal)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div class="border-t-2 border-brand-200 pt-3 flex justify-between items-center">
+            <span class="font-bold text-gray-700">TOTAL</span>
+            <span class="text-xl font-bold text-brand-700" x-text="'Rp ' + formatRupiah(detail?.total)"></span>
+          </div>
+        </div>
+
+        <!-- EDIT MODE: Editable quantities -->
+        <div x-show="editing" class="px-6 py-4">
+          <p class="text-xs text-gray-500 mb-3">Ubah jumlah item. Set ke 0 untuk menghapus item dari struk.</p>
+          <div class="space-y-2 mb-4 max-h-64 overflow-y-auto">
+            <template x-for="item in editItems" :key="item.id">
+              <div class="flex items-center gap-2 bg-brand-50 rounded-xl p-3">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-800 truncate" x-text="item.name"></p>
+                  <p class="text-xs text-gray-400" x-text="'@ Rp ' + formatRupiah(item.item_price)"></p>
+                  <p x-show="(parseInt(item.new_qty)||0) === 0" class="text-xs text-red-500 font-medium">Item akan dihapus</p>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <button @click="item.new_qty = Math.max(0, (parseInt(item.new_qty)||0) - 1)"
+                    class="w-9 h-9 rounded-full bg-white border border-gray-200 hover:bg-red-50 hover:border-red-300 transition font-bold text-gray-600 flex items-center justify-center text-base">
+                    −
+                  </button>
+                  <input type="number" x-model="item.new_qty" min="0"
+                    class="w-12 text-center border border-gray-300 rounded-lg py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                  <button @click="item.new_qty = (parseInt(item.new_qty)||0) + 1"
+                    class="w-9 h-9 rounded-full bg-white border border-gray-200 hover:bg-green-50 hover:border-green-300 transition font-bold text-gray-600 flex items-center justify-center text-base">
+                    +
+                  </button>
+                </div>
+                <div class="text-right flex-shrink-0 w-20">
+                  <p class="text-xs font-semibold text-brand-700"
+                     x-text="'Rp ' + formatRupiah(item.item_price * (parseInt(item.new_qty)||0))"></p>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="border-t-2 border-brand-200 pt-3 flex justify-between items-center">
+            <span class="font-bold text-gray-700">TOTAL BARU</span>
+            <span class="text-xl font-bold text-brand-700" x-text="'Rp ' + formatRupiah(getEditTotal())"></span>
+          </div>
+        </div>
+
+        <!-- Footer buttons -->
+        <div class="px-6 pb-5 space-y-2">
+          <!-- View mode -->
+          <div x-show="!editing" class="flex gap-2">
+            <button @click="startEdit()"
+              class="flex-1 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-xl transition text-sm font-medium">
+              ✏️ Edit Struk
+            </button>
+            <button @click="deleteTransaction()" :disabled="deleting"
+              :class="deleting ? 'opacity-60 cursor-not-allowed' : ''"
+              class="flex-1 py-2.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl transition text-sm font-medium">
+              <span x-show="!deleting">🗑️ Hapus Struk</span>
+              <span x-show="deleting" x-cloak>Menghapus...</span>
+            </button>
+          </div>
+          <button x-show="!editing" @click="detail = null; editing = false"
+            class="w-full py-2.5 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition text-sm font-medium">
+            Tutup
+          </button>
+
+          <!-- Edit mode -->
+          <div x-show="editing" class="flex gap-2">
+            <button @click="cancelEdit()"
+              class="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition text-sm font-medium">
+              Batal
+            </button>
+            <button @click="saveEdit()" :disabled="saving"
+              :class="saving ? 'opacity-60 cursor-not-allowed' : 'hover:bg-brand-700'"
+              class="flex-1 py-2.5 bg-brand-600 text-white rounded-xl transition text-sm font-semibold">
+              <span x-show="!saving">Simpan Perubahan</span>
+              <span x-show="saving" x-cloak>Menyimpan...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function rekapApp() {
+  return {
+    detail: null,
+    loadingDetail: false,
+    editing: false,
+    editItems: [],
+    saving: false,
+    deleting: false,
+
+    formatRupiah(amount) {
+      if (!amount && amount !== 0) return '0';
+      return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    },
+
+    getEditTotal() {
+      return this.editItems.reduce((sum, i) => {
+        return sum + i.item_price * Math.max(0, parseInt(i.new_qty) || 0);
+      }, 0);
+    },
+
+    async openDetail(txId) {
+      this.detail = {};
+      this.editing = false;
+      this.editItems = [];
+      this.loadingDetail = true;
+      try {
+        const res = await fetch(`/admin/api/transactions/${txId}`);
+        if (res.ok) {
+          this.detail = await res.json();
+        } else {
+          this.detail = null;
+          alert('Gagal memuat detail transaksi.');
+        }
+      } catch(e) {
+        this.detail = null;
+        alert('Gagal terhubung ke server.');
+      }
+      this.loadingDetail = false;
+    },
+
+    startEdit() {
+      this.editItems = this.detail.items.map(i => ({
+        id: i.id,
+        name: i.name,
+        item_price: i.price,
+        new_qty: i.qty,
+      }));
+      this.editing = true;
+    },
+
+    cancelEdit() {
+      this.editing = false;
+      this.editItems = [];
+    },
+
+    async saveEdit() {
+      if (this.saving) return;
+      this.saving = true;
+      try {
+        const payload = {
+          items: this.editItems.map(i => ({
+            transaction_item_id: i.id,
+            qty: Math.max(0, parseInt(i.new_qty) || 0),
+          }))
+        };
+        const res = await fetch(`/admin/api/transactions/${this.detail.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          location.reload();
+        } else {
+          alert(data.error || 'Gagal menyimpan perubahan.');
+        }
+      } catch(e) {
+        alert('Gagal terhubung ke server.');
+      }
+      this.saving = false;
+    },
+
+    async deleteTransaction() {
+      if (!confirm('Hapus struk ini?\nStok semua item akan dikembalikan ke kondisi sebelum transaksi.')) return;
+      this.deleting = true;
+      try {
+        const res = await fetch(`/admin/api/transactions/${this.detail.id}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          location.reload();
+        } else {
+          alert(data.error || 'Gagal menghapus transaksi.');
+        }
+      } catch(e) {
+        alert('Gagal terhubung ke server.');
+      }
+      this.deleting = false;
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}POS — {{ event.name }}{% endblock %}
+
+{% block nav %}
+<a href="/kasir" class="px-3 py-1.5 rounded hover:bg-brand-600 transition text-sm">← Ganti Event</a>
+{% endblock %}
+
+{% block main_class %}h-[calc(100vh-64px)] overflow-hidden{% endblock %}
+
+{% block content %}
+<script>
+  window.__EVENT_ID__ = {{ event.id }};
+  window.__MENU_ITEMS__ = {{ items | tojson }};
+</script>
+<div
+  x-data="posApp()"
+  x-init="init()"
+  class="flex h-full gap-0"
+>
+
+  <!-- LEFT: Menu Grid -->
+  <div class="flex-1 overflow-y-auto bg-brand-50 p-3 md:p-4">
+    <!-- Event info bar -->
+    <div class="mb-4 flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-bold text-brand-800">{{ event.name }}</h2>
+        <p class="text-xs text-gray-500">{{ event.start_date.strftime('%d %b') }} – {{ event.end_date.strftime('%d %b %Y') }}</p>
+      </div>
+      <div class="text-xs text-gray-400" x-text="currentTime"></div>
+    </div>
+
+    <!-- Refresh stock button -->
+    <div class="mb-3 flex items-center gap-2">
+      <button @click="refreshStock()"
+        class="text-xs px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition flex items-center gap-1">
+        <span x-show="!refreshing">↻ Refresh Stok</span>
+        <span x-show="refreshing" x-cloak>⟳ Loading...</span>
+      </button>
+    </div>
+
+    <!-- Menu grid -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <template x-for="item in menuItems" :key="item.id">
+        <button
+          @click="addToCart(item)"
+          :disabled="item.stock <= 0"
+          :class="{
+            'opacity-50 cursor-not-allowed bg-gray-100': item.stock <= 0,
+            'bg-white hover:shadow-md hover:border-brand-400 active:scale-95': item.stock > 0
+          }"
+          class="border-2 border-brand-100 rounded-2xl p-4 text-left transition-all duration-150 flex flex-col gap-2 min-h-[120px]"
+        >
+          <span class="font-semibold text-gray-800 text-sm leading-tight" x-text="item.name"></span>
+          <span class="text-brand-700 font-bold text-base" x-text="'Rp ' + formatRupiah(item.price)"></span>
+          <div class="mt-auto">
+            <span
+              :class="{
+                'bg-red-100 text-red-600': item.stock === 0,
+                'bg-yellow-100 text-yellow-700': item.stock > 0 && item.stock <= 5,
+                'bg-green-100 text-green-700': item.stock > 5
+              }"
+              class="text-xs px-2 py-0.5 rounded-full font-medium"
+              x-text="item.stock === 0 ? 'Habis' : 'Stok: ' + item.stock"
+            ></span>
+          </div>
+        </button>
+      </template>
+    </div>
+  </div>
+
+  <!-- RIGHT: Cart Panel -->
+  <div class="w-60 md:w-72 lg:w-80 bg-white border-l border-gray-200 flex flex-col shadow-xl">
+    <!-- Cart header -->
+    <div class="bg-brand-700 text-white px-4 py-3 md:px-5 md:py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🛒</span>
+        <span class="font-bold">Keranjang</span>
+      </div>
+      <span class="text-brand-200 text-sm" x-text="cart.length + ' item'"></span>
+    </div>
+
+    <!-- Cart items -->
+    <div class="flex-1 overflow-y-auto p-3 space-y-3">
+      <template x-if="cart.length === 0">
+        <div class="h-full flex flex-col items-center justify-center text-center text-gray-400 py-12">
+          <div class="text-4xl mb-3">🛒</div>
+          <p class="text-sm">Keranjang kosong</p>
+          <p class="text-xs mt-1">Tap item di kiri untuk menambahkan</p>
+        </div>
+      </template>
+
+      <template x-for="(cartItem, idx) in cart" :key="cartItem.id">
+        <div class="bg-brand-50 rounded-xl p-3 border border-brand-100">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <span class="font-medium text-sm text-gray-800 leading-tight flex-1" x-text="cartItem.name"></span>
+            <button @click="removeFromCart(idx)"
+              class="text-red-400 hover:text-red-600 transition text-xs flex-shrink-0 mt-0.5">✕</button>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <button @click="updateQty(idx, cartItem.qty - 1)"
+                class="w-9 h-9 rounded-full bg-white border border-gray-200 hover:bg-red-50 hover:border-red-300 transition font-bold text-gray-600 flex items-center justify-center text-base">
+                −
+              </button>
+              <span class="font-bold text-brand-800 w-7 text-center text-sm" x-text="cartItem.qty"></span>
+              <button @click="updateQty(idx, cartItem.qty + 1)"
+                class="w-9 h-9 rounded-full bg-white border border-gray-200 hover:bg-green-50 hover:border-green-300 transition font-bold text-gray-600 flex items-center justify-center text-base">
+                +
+              </button>
+            </div>
+            <span class="text-sm font-semibold text-brand-700"
+              x-text="'Rp ' + formatRupiah(cartItem.price * cartItem.qty)"></span>
+          </div>
+          <div class="mt-1 text-xs text-gray-400"
+            x-text="'@ Rp ' + formatRupiah(cartItem.price)"></div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Cart footer -->
+    <div class="border-t border-gray-200 p-3 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="font-semibold text-gray-700">Total</span>
+        <span class="text-xl font-bold text-brand-700" x-text="'Rp ' + formatRupiah(getTotal())"></span>
+      </div>
+
+      <button
+        @click="checkout()"
+        :disabled="cart.length === 0 || loading"
+        :class="{
+          'opacity-50 cursor-not-allowed': cart.length === 0 || loading,
+          'hover:bg-brand-700 active:scale-95': cart.length > 0 && !loading
+        }"
+        class="w-full bg-brand-600 text-white font-bold py-4 rounded-xl transition-all duration-150 text-base flex items-center justify-center gap-2"
+      >
+        <template x-if="!loading">
+          <span>🧾 Buat Struk</span>
+        </template>
+        <template x-if="loading">
+          <span>⟳ Memproses...</span>
+        </template>
+      </button>
+
+      <button
+        @click="clearCart()"
+        x-show="cart.length > 0"
+        x-cloak
+        class="w-full text-red-500 hover:text-red-700 text-sm py-1 transition">
+        Kosongkan Keranjang
+      </button>
+    </div>
+  </div>
+
+  <!-- Success overlay -->
+  <div x-show="successMsg" x-cloak
+       class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+       @click="successMsg = ''">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center" @click.stop>
+      <div class="text-6xl mb-4">✅</div>
+      <h3 class="text-xl font-bold text-gray-800 mb-2">Transaksi Berhasil!</h3>
+      <p class="text-gray-500 text-sm mb-2" x-text="successMsg"></p>
+      <p x-show="strukOk" class="text-xs text-gray-400 mb-6">File PNG sudah terdownload otomatis.</p>
+      <p x-show="!strukOk" x-cloak class="text-xs text-orange-500 mb-6">Transaksi tercatat. Struk tidak dapat dibuat saat ini.</p>
+      <button @click="successMsg = ''"
+        class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-xl transition">
+        OK, Lanjut
+      </button>
+    </div>
+  </div>
+
+  <!-- Error overlay -->
+  <div x-show="errorMsg" x-cloak
+       class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+       @click="errorMsg = ''">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center" @click.stop>
+      <div class="text-6xl mb-4">⚠️</div>
+      <h3 class="text-xl font-bold text-gray-800 mb-2">Terjadi Kesalahan</h3>
+      <p class="text-gray-500 text-sm mb-6" x-text="errorMsg"></p>
+      <button @click="errorMsg = ''"
+        class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition">
+        Tutup
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function posApp() {
+  return {
+    eventId: window.__EVENT_ID__,
+    menuItems: window.__MENU_ITEMS__ || [],
+    cart: [],
+    loading: false,
+    refreshing: false,
+    successMsg: '',
+    strukOk: true,
+    errorMsg: '',
+    currentTime: '',
+
+    init() {
+      this.updateTime();
+      setInterval(() => this.updateTime(), 1000);
+    },
+
+    updateTime() {
+      const now = new Date();
+      const wib = new Date(now.getTime() + (7 * 60 * 60 * 1000 - now.getTimezoneOffset() * 60 * 1000));
+      this.currentTime = wib.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+    },
+
+    formatRupiah(amount) {
+      return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    },
+
+    findMenuItemById(id) {
+      return this.menuItems.find(m => m.id === id);
+    },
+
+    addToCart(item) {
+      if (item.stock <= 0) return;
+      const existing = this.cart.find(c => c.id === item.id);
+      if (existing) {
+        const menuItem = this.findMenuItemById(item.id);
+        if (existing.qty < (menuItem ? menuItem.stock : item.stock)) {
+          existing.qty++;
+        }
+      } else {
+        this.cart.push({ id: item.id, name: item.name, price: item.price, qty: 1 });
+      }
+    },
+
+    removeFromCart(idx) {
+      this.cart.splice(idx, 1);
+    },
+
+    updateQty(idx, newQty) {
+      if (newQty <= 0) {
+        this.cart.splice(idx, 1);
+        return;
+      }
+      const cartItem = this.cart[idx];
+      const menuItem = this.findMenuItemById(cartItem.id);
+      const maxStock = menuItem ? menuItem.stock : 9999;
+      this.cart[idx].qty = Math.min(newQty, maxStock);
+    },
+
+    getTotal() {
+      return this.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    },
+
+    clearCart() {
+      this.cart = [];
+    },
+
+    async refreshStock() {
+      this.refreshing = true;
+      try {
+        const res = await fetch(`/api/events/${this.eventId}/menu-items`);
+        if (res.ok) {
+          const fresh = await res.json();
+          this.menuItems = fresh;
+          // Clamp cart qtys to new stock
+          this.cart = this.cart.filter(c => {
+            const m = fresh.find(f => f.id === c.id);
+            return m && m.stock > 0;
+          }).map(c => {
+            const m = fresh.find(f => f.id === c.id);
+            return { ...c, qty: Math.min(c.qty, m.stock) };
+          });
+        }
+      } catch(e) {}
+      this.refreshing = false;
+    },
+
+    async checkout() {
+      if (this.cart.length === 0 || this.loading) return;
+      this.loading = true;
+
+      const payload = {
+        event_id: this.eventId,
+        items: this.cart.map(c => ({ menu_item_id: c.id, qty: c.qty }))
+      };
+
+      try {
+        const res = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          // Trigger download hanya jika struk berhasil dibuat
+          this.strukOk = !!data.struk_url;
+          if (data.struk_url) {
+            const link = document.createElement('a');
+            link.href = data.struk_url;
+            link.download = `Struk-${data.transaction_number}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+
+          this.successMsg = `Transaksi ${data.transaction_number} • Total Rp ${this.formatRupiah(data.total)}`;
+          this.cart = [];
+          await this.refreshStock();
+        } else {
+          this.errorMsg = data.error || 'Terjadi kesalahan saat memproses transaksi.';
+        }
+      } catch(e) {
+        this.errorMsg = 'Gagal terhubung ke server. Periksa koneksi Anda.';
+      }
+
+      this.loading = false;
+    }
+  };
+}
+</script>
+{% endblock %}
