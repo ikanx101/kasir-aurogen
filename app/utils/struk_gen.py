@@ -54,20 +54,20 @@ def generate_struk(
     payment_method: str = "tunai",
 ) -> str:
     SCALE = 2
-    WIDTH = 600
+    WIDTH = 380  # Narrow like thermal/minimarket receipt
     BG_COLOR = (255, 255, 255)
     TEXT_COLOR = (26, 26, 26)
     BORDER_COLOR = (60, 60, 60)
 
-    PAD_X = 28 * SCALE
-    PAD_Y = 20 * SCALE
-    LINE_H = 20 * SCALE
-    SECTION_GAP = 10 * SCALE
+    PAD_X = 20 * SCALE
+    PAD_Y = 16 * SCALE
+    LINE_H = 18 * SCALE
+    SECTION_GAP = 8 * SCALE
 
-    SIZE_STORE = 22 * SCALE
-    SIZE_EVENT = 15 * SCALE
-    SIZE_NORMAL = 14 * SCALE
-    SIZE_TOTAL = 16 * SCALE
+    SIZE_STORE = 20 * SCALE
+    SIZE_EVENT = 13 * SCALE
+    SIZE_NORMAL = 12 * SCALE
+    SIZE_TOTAL = 13 * SCALE
 
     font_normal = _get_font(FONT_PATHS, SIZE_NORMAL)
     font_bold = _get_font(BOLD_FONT_PATHS, SIZE_STORE)
@@ -83,8 +83,8 @@ def generate_struk(
     if os.path.exists(LOGO_PATH):
         try:
             raw = Image.open(LOGO_PATH).convert("RGB")
-            max_logo_w = 180 * SCALE
-            max_logo_h = 80 * SCALE
+            max_logo_w = 140 * SCALE
+            max_logo_h = 55 * SCALE
             ratio = min(max_logo_w / raw.width, max_logo_h / raw.height)
             new_w = int(raw.width * ratio)
             new_h = int(raw.height * ratio)
@@ -109,8 +109,6 @@ def generate_struk(
     date_str = f"{local_dt.day} {MONTH_ID[local_dt.month]} {local_dt.year}"
     time_str = local_dt.strftime("%H:%M") + " WIB"
     datetime_str = f"{date_str}  {time_str}"
-
-    sep_line = "─" * 42
 
     item_lines = []
     for it in items:
@@ -155,24 +153,36 @@ def generate_struk(
 
     def draw_sep(char="─", bold=False):
         nonlocal y
-        line = char * 42
         f = font_total if bold else font_item
+        _, char_w = text_bbox_info(char, f)
+        n_chars = max(1, (WIDTH * SCALE - PAD_X * 2) // char_w) if char_w > 0 else 36
+        line = char * n_chars
         draw.text((PAD_X, y), line, font=f, fill=BORDER_COLOR)
         y += LINE_H + 4 * SCALE
 
     def draw_item_row(name, price_str, sub_str):
         nonlocal y
-        max_name = 18
+        # Draw name on the left, subtotal pixel-right-aligned, price in between
+        max_name = 16
         if len(name) > max_name:
             name = name[:max_name - 1] + "…"
-        row = f"{name:<18} {price_str:>12}  {sub_str:>8}"
-        draw.text((PAD_X, y), row, font=font_item, fill=TEXT_COLOR)
+        draw.text((PAD_X, y), name, font=font_item, fill=TEXT_COLOR)
+        # Subtotal right-aligned
+        left_off_s, w_s = text_bbox_info(sub_str, font_item)
+        x_sub = WIDTH * SCALE - PAD_X - w_s - left_off_s
+        draw.text((x_sub, y), sub_str, font=font_item, fill=TEXT_COLOR)
+        # Price string just to the left of subtotal (clamped to stay right of name area)
+        left_off_p, w_p = text_bbox_info(price_str, font_item)
+        x_price = max(PAD_X, x_sub - w_p - left_off_p - (6 * SCALE))
+        draw.text((x_price, y), price_str, font=font_item, fill=(100, 100, 100))
         y += LINE_H + 4 * SCALE
 
     def draw_total_row(label, value):
         nonlocal y
-        row = f"{label:<18} {'':>12}  {value:>8}"
-        draw.text((PAD_X, y), row, font=font_total, fill=TEXT_COLOR)
+        draw.text((PAD_X, y), label, font=font_total, fill=TEXT_COLOR)
+        left_off, w = text_bbox_info(value, font_total)
+        x_right = WIDTH * SCALE - PAD_X - w - left_off
+        draw.text((x_right, y), value, font=font_total, fill=TEXT_COLOR)
         y += LINE_H + 4 * SCALE
 
     # Header
