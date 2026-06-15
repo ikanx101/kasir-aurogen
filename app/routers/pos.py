@@ -26,6 +26,9 @@ class CartItem(BaseModel):
 class CheckoutRequest(BaseModel):
     event_id: int
     items: List[CartItem]
+    customer_name: str = ""
+    customer_phone: str = ""
+    payment_method: str = "tunai"
 
 
 @router.get("/kasir", response_class=HTMLResponse)
@@ -88,12 +91,17 @@ async def create_transaction(payload: CheckoutRequest, db: Session = Depends(get
     tx_suffix = uuid.uuid4().hex[:6].upper()
     tx_number = f"TRX-{now_wib.strftime('%Y%m%d')}-{tx_suffix}"
 
+    pay_method = payload.payment_method if payload.payment_method in ("tunai", "qris") else "tunai"
+
     # Create transaction
     tx = Transaction(
         event_id=payload.event_id,
         transaction_number=tx_number,
         created_at=now_wib.replace(tzinfo=None),
         total=total,
+        customer_name=payload.customer_name.strip() or None,
+        customer_phone=payload.customer_phone.strip() or None,
+        payment_method=pay_method,
     )
     db.add(tx)
     db.flush()
@@ -130,6 +138,9 @@ async def create_transaction(payload: CheckoutRequest, db: Session = Depends(get
             total=total,
             created_at=now_wib,
             output_path=struk_path,
+            customer_name=payload.customer_name.strip() or None,
+            customer_phone=payload.customer_phone.strip() or None,
+            payment_method=pay_method,
         )
         tx.struk_path = struk_path
         struk_generated = True

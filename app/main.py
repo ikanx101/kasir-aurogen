@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import os
+from sqlalchemy import text, inspect as sa_inspect
 
 from .database import engine, Base
 from .models import Event, MenuItem, Transaction, TransactionItem
@@ -11,6 +12,22 @@ from .routers import auth, events, menu, pos, admin
 from .templates_config import templates
 
 Base.metadata.create_all(bind=engine)
+
+
+def _run_column_migrations():
+    """Safely add new columns to existing tables without breaking existing data."""
+    with engine.connect() as conn:
+        try:
+            existing_cols = [c["name"] for c in sa_inspect(engine).get_columns("transactions")]
+            for col_name in ("customer_name", "customer_phone", "payment_method"):
+                if col_name not in existing_cols:
+                    conn.execute(text(f"ALTER TABLE transactions ADD COLUMN {col_name} VARCHAR"))
+            conn.commit()
+        except Exception:
+            pass
+
+
+_run_column_migrations()
 
 app = FastAPI(title="Kasir Dapoerasatoe")
 

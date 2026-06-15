@@ -9,8 +9,9 @@ Aplikasi kasir berbasis web untuk event bazaar. Dioptimalkan untuk layar tablet 
 - **Manajemen Event** — buat, edit, aktifkan/nonaktifkan event bazaar
 - **Manajemen Menu** — CRUD menu item (nama, harga, stok) per event; stok tidak bisa minus
 - **POS / Kasir** — grid menu + keranjang belanja, finger-friendly, notifikasi stok tidak cukup
-- **Struk PNG** — generate dan download struk otomatis setelah transaksi; menyertakan **logo usaha**
-- **Rekap Admin** — tabel omset per event, riwayat transaksi + detail per nomor
+- **Data Pelanggan & Pembayaran** — saat checkout kasir mengisi nama pelanggan, nomor HP/WA (opsional), dan metode pembayaran (Tunai / QRIS)
+- **Struk PNG** — generate dan download struk otomatis setelah transaksi; menyertakan **logo usaha**, info pelanggan, dan metode pembayaran
+- **Rekap Admin** — tabel omset per event, breakdown Tunai vs QRIS, riwayat transaksi + detail per nomor (termasuk info pelanggan)
 - **Edit & Hapus Struk** — admin dapat mengedit qty item atau menghapus struk; **stok otomatis dikembalikan** ke kondisi sebelum transaksi
 - **Logo di semua halaman** — logo usaha (`logo_utama.jpeg`) tampil di header setiap halaman
 
@@ -95,7 +96,9 @@ Salin `.env.example` → `.env` untuk development lokal.
     Admin buat event → input menu & stok
         ↓
 [Saat Event]
-    Kasir buka POS → tap item → "Buat Struk" → PNG terdownload
+    Kasir buka POS → tap item → "Buat Struk"
+        → isi nama pelanggan, HP/WA (opsional) + pilih metode pembayaran (Tunai/QRIS)
+        → konfirmasi → PNG terdownload
         ↓  (stok berkurang otomatis)
 [Koreksi]
     Admin buka Rekap → klik "Lihat" pada transaksi
