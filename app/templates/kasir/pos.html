@@ -125,7 +125,7 @@
       </div>
 
       <button
-        @click="checkout()"
+        @click="openCheckoutModal()"
         :disabled="cart.length === 0 || loading"
         :class="{
           'opacity-50 cursor-not-allowed': cart.length === 0 || loading,
@@ -133,12 +133,7 @@
         }"
         class="w-full bg-brand-600 text-white font-bold py-4 rounded-xl transition-all duration-150 text-base flex items-center justify-center gap-2"
       >
-        <template x-if="!loading">
-          <span>🧾 Buat Struk</span>
-        </template>
-        <template x-if="loading">
-          <span>⟳ Memproses...</span>
-        </template>
+        <span>🧾 Buat Struk</span>
       </button>
 
       <button
@@ -148,6 +143,110 @@
         class="w-full text-red-500 hover:text-red-700 text-sm py-1 transition">
         Kosongkan Keranjang
       </button>
+    </div>
+  </div>
+
+  <!-- Checkout Modal -->
+  <div x-show="showCheckoutModal" x-cloak
+       class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm" @click.stop>
+      <!-- Header -->
+      <div class="bg-brand-700 text-white rounded-t-2xl px-5 py-4">
+        <h3 class="font-bold text-lg">Detail Transaksi</h3>
+        <p class="text-brand-200 text-sm mt-0.5">
+          Total: <span class="font-bold text-white" x-text="'Rp ' + formatRupiah(getTotal())"></span>
+        </p>
+      </div>
+
+      <div class="px-5 py-4 space-y-4">
+        <!-- Nama Pelanggan -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+            Nama Pelanggan <span class="text-gray-400 font-normal">(opsional)</span>
+          </label>
+          <input
+            type="text"
+            x-model="checkoutForm.customer_name"
+            placeholder="Contoh: Budi Santoso"
+            maxlength="60"
+            class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+          />
+        </div>
+
+        <!-- Nomor HP/WA -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+            Nomor HP / WhatsApp <span class="text-gray-400 font-normal">(opsional)</span>
+          </label>
+          <input
+            type="tel"
+            x-model="checkoutForm.customer_phone"
+            placeholder="Contoh: 081234567890"
+            maxlength="20"
+            class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+          />
+        </div>
+
+        <!-- Metode Pembayaran -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Metode Pembayaran <span class="text-red-400">*</span>
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <label
+              :class="checkoutForm.payment_method === 'tunai'
+                ? 'border-brand-500 bg-brand-50 text-brand-800'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-brand-300'"
+              class="flex items-center gap-3 border-2 rounded-xl px-4 py-3 cursor-pointer transition-all"
+            >
+              <input type="radio" x-model="checkoutForm.payment_method" value="tunai" class="hidden" />
+              <span class="text-xl">💵</span>
+              <div>
+                <p class="font-semibold text-sm">Tunai</p>
+                <p class="text-xs opacity-60">Cash</p>
+              </div>
+              <span x-show="checkoutForm.payment_method === 'tunai'" class="ml-auto text-brand-600 font-bold text-base">✓</span>
+            </label>
+            <label
+              :class="checkoutForm.payment_method === 'qris'
+                ? 'border-brand-500 bg-brand-50 text-brand-800'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-brand-300'"
+              class="flex items-center gap-3 border-2 rounded-xl px-4 py-3 cursor-pointer transition-all"
+            >
+              <input type="radio" x-model="checkoutForm.payment_method" value="qris" class="hidden" />
+              <span class="text-xl">📱</span>
+              <div>
+                <p class="font-semibold text-sm">QRIS</p>
+                <p class="text-xs opacity-60">Scan QR</p>
+              </div>
+              <span x-show="checkoutForm.payment_method === 'qris'" class="ml-auto text-brand-600 font-bold text-base">✓</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer buttons -->
+      <div class="px-5 pb-5 space-y-2">
+        <button
+          @click="submitCheckout()"
+          :disabled="loading"
+          :class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-brand-700 active:scale-95'"
+          class="w-full bg-brand-600 text-white font-bold py-4 rounded-xl transition-all duration-150 text-base flex items-center justify-center gap-2"
+        >
+          <template x-if="!loading">
+            <span>🧾 Konfirmasi & Buat Struk</span>
+          </template>
+          <template x-if="loading">
+            <span>⟳ Memproses...</span>
+          </template>
+        </button>
+        <button
+          @click="showCheckoutModal = false"
+          :disabled="loading"
+          class="w-full text-gray-500 hover:text-gray-700 text-sm py-2 transition">
+          Batal
+        </button>
+      </div>
     </div>
   </div>
 
@@ -199,6 +298,8 @@ function posApp() {
     strukOk: true,
     errorMsg: '',
     currentTime: '',
+    showCheckoutModal: false,
+    checkoutForm: { customer_name: '', customer_phone: '', payment_method: 'tunai' },
 
     init() {
       this.updateTime();
@@ -255,6 +356,12 @@ function posApp() {
       this.cart = [];
     },
 
+    openCheckoutModal() {
+      if (this.cart.length === 0 || this.loading) return;
+      this.checkoutForm = { customer_name: '', customer_phone: '', payment_method: 'tunai' };
+      this.showCheckoutModal = true;
+    },
+
     async refreshStock() {
       this.refreshing = true;
       try {
@@ -275,13 +382,17 @@ function posApp() {
       this.refreshing = false;
     },
 
-    async checkout() {
+    async submitCheckout() {
       if (this.cart.length === 0 || this.loading) return;
       this.loading = true;
+      this.showCheckoutModal = false;
 
       const payload = {
         event_id: this.eventId,
-        items: this.cart.map(c => ({ menu_item_id: c.id, qty: c.qty }))
+        items: this.cart.map(c => ({ menu_item_id: c.id, qty: c.qty })),
+        customer_name: this.checkoutForm.customer_name,
+        customer_phone: this.checkoutForm.customer_phone,
+        payment_method: this.checkoutForm.payment_method,
       };
 
       try {

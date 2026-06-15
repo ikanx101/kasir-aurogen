@@ -49,6 +49,9 @@ def generate_struk(
     total: int,
     created_at: datetime,
     output_path: str,
+    customer_name: str = None,
+    customer_phone: str = None,
+    payment_method: str = "tunai",
 ) -> str:
     SCALE = 2
     WIDTH = 600
@@ -90,15 +93,15 @@ def generate_struk(
         except Exception:
             pass
 
-    # Measure text width helper
-    def text_w(text, font):
+    # Measure text bbox helper — returns (left_offset, width)
+    def text_bbox_info(text, font):
         try:
             dummy = Image.new("RGB", (1, 1))
             d = ImageDraw.Draw(dummy)
             bbox = d.textbbox((0, 0), text, font=font)
-            return bbox[2] - bbox[0]
+            return bbox[0], bbox[2] - bbox[0]
         except Exception:
-            return len(text) * SIZE_NORMAL // 2
+            return 0, len(text) * SIZE_NORMAL // 2
 
     # Format datetime
     wib_offset = 7 * 3600
@@ -121,9 +124,10 @@ def generate_struk(
 
     # Estimate height (image is cropped to actual content at the end)
     n_header = 6 + 1  # sep + logo + store + event + datetime + tx# + sep
+    n_customer = 1 + (1 if customer_name else 0) + (1 if customer_phone else 0)  # payment + optional fields + sep
     n_items = len(item_lines) + 2
     n_footer = 5
-    total_lines = n_header + n_items + n_footer
+    total_lines = n_header + n_customer + n_items + n_footer
     HEIGHT = (
         PAD_Y * 2
         + total_lines * (LINE_H + 4 * SCALE)
@@ -139,8 +143,8 @@ def generate_struk(
 
     def draw_centered(text, font, color=TEXT_COLOR):
         nonlocal y
-        w = text_w(text, font)
-        x = (WIDTH * SCALE - w) // 2
+        left_off, w = text_bbox_info(text, font)
+        x = (WIDTH * SCALE - w) // 2 - left_off
         draw.text((x, y), text, font=font, fill=color)
         y += LINE_H + 4 * SCALE
 
@@ -153,7 +157,9 @@ def generate_struk(
         nonlocal y
         line = char * 42
         f = font_total if bold else font_item
-        draw.text((PAD_X, y), line, font=f, fill=BORDER_COLOR)
+        left_off, w = text_bbox_info(line, f)
+        x = (WIDTH * SCALE - w) // 2 - left_off
+        draw.text((x, y), line, font=f, fill=BORDER_COLOR)
         y += LINE_H + 4 * SCALE
 
     def draw_item_row(name, price_str, sub_str):
@@ -184,6 +190,15 @@ def generate_struk(
     draw_centered(event_name, font_event)
     draw_centered(datetime_str, font_item)
     draw_centered(f"No: {transaction_number}", font_item)
+    draw_sep("─")
+
+    # Customer & payment info
+    if customer_name:
+        draw_left(f"Pelanggan : {customer_name[:26]}", font_item)
+    if customer_phone:
+        draw_left(f"HP/WA     : {customer_phone[:26]}", font_item)
+    pay_label = "TUNAI" if payment_method == "tunai" else "QRIS"
+    draw_left(f"Pembayaran: {pay_label}", font_item)
     draw_sep("─")
 
     # Items

@@ -141,8 +141,23 @@
           <p class="text-base md:text-xl font-bold">{{ format_rupiah(recap_data.avg_tx) }}</p>
         </div>
       </div>
+      <!-- Breakdown Metode Pembayaran -->
+      <div class="mt-4">
+        <p class="text-xs font-semibold opacity-70 mb-2">💳 Metode Pembayaran</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-white/10 rounded-xl p-3">
+            <p class="text-brand-200 text-xs uppercase tracking-wide mb-1">Tunai ({{ recap_data.tunai_count }}×)</p>
+            <p class="text-base font-bold">{{ format_rupiah(recap_data.tunai_total) }}</p>
+          </div>
+          <div class="bg-white/10 rounded-xl p-3">
+            <p class="text-brand-200 text-xs uppercase tracking-wide mb-1">QRIS ({{ recap_data.qris_count }}×)</p>
+            <p class="text-base font-bold">{{ format_rupiah(recap_data.qris_total) }}</p>
+          </div>
+        </div>
+      </div>
+
       {% if recap_data.top_items %}
-      <div>
+      <div class="mt-4">
         <p class="text-xs font-semibold opacity-70 mb-2">🏆 Top 5 Terlaris</p>
         <div class="space-y-1.5">
           {% for it in recap_data.top_items %}
@@ -166,6 +181,7 @@
             <tr>
               <th class="text-left px-5 py-3">No. Transaksi</th>
               <th class="text-left px-5 py-3 hidden sm:table-cell">Event</th>
+              <th class="text-left px-5 py-3 hidden md:table-cell">Pembayaran</th>
               <th class="text-left px-5 py-3">Waktu</th>
               <th class="text-right px-5 py-3">Total</th>
               <th class="text-center px-5 py-3">Detail</th>
@@ -179,6 +195,13 @@
               </td>
               <td class="px-5 py-3 text-gray-600 hidden sm:table-cell">
                 {{ tx.event.name if tx.event else '(event dihapus)' }}
+              </td>
+              <td class="px-5 py-3 hidden md:table-cell">
+                {% if tx.payment_method == 'qris' %}
+                  <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-semibold">QRIS</span>
+                {% else %}
+                  <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">Tunai</span>
+                {% endif %}
               </td>
               <td class="px-5 py-3 text-gray-500 text-xs whitespace-nowrap">
                 {{ tx.created_at.strftime('%d/%m/%Y %H:%M') }}
@@ -243,6 +266,26 @@
             </div>
           </div>
           <p class="text-brand-200 text-xs mt-2" x-text="detail?.created_at"></p>
+        </div>
+
+        <!-- Customer info (always visible in view mode) -->
+        <div x-show="!editing" class="px-6 pt-4 pb-0">
+          <div class="bg-gray-50 rounded-xl p-3 text-sm space-y-1.5">
+            <div x-show="detail?.customer_name" class="flex items-center gap-2">
+              <span class="text-gray-400 text-xs w-24 flex-shrink-0">Pelanggan</span>
+              <span class="font-medium text-gray-800" x-text="detail?.customer_name"></span>
+            </div>
+            <div x-show="detail?.customer_phone" class="flex items-center gap-2">
+              <span class="text-gray-400 text-xs w-24 flex-shrink-0">HP / WA</span>
+              <span class="font-medium text-gray-800" x-text="detail?.customer_phone"></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-400 text-xs w-24 flex-shrink-0">Pembayaran</span>
+              <span class="text-xs px-2 py-0.5 rounded-full font-semibold"
+                :class="detail?.payment_method === 'qris' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'"
+                x-text="detail?.payment_method === 'qris' ? 'QRIS' : 'Tunai'"></span>
+            </div>
+          </div>
         </div>
 
         <!-- VIEW MODE: Items table -->

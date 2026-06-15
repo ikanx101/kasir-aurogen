@@ -1,7 +1,7 @@
 # Aplikasi Kasir Bazaar — Dapoerasatoe
 
 > **Project Requirements Document**
-> Versi: 2.0 — 14 Juni 2026 (diperbarui)
+> Versi: 2.1 — 15 Juni 2026 (diperbarui)
 
 ---
 
@@ -76,10 +76,19 @@ Tampilan utama kasir, diakses via tablet (mode landscape ideal).
 **Flow:**
 1. Tap item → masuk ke keranjang
 2. Atur qty
-3. Tap "Buat Struk" → struk PNG ter-generate dan otomatis ter-download
-4. Stok item berkurang sesuai qty yang dibeli
-5. Item dengan stok 0 akan tampil **disabled/greyed out** dan tidak bisa diklik
-6. Jika stok tidak cukup → **error jelas ditampilkan**, transaksi tidak diproses (tidak ada silent clamp)
+3. Tap "Buat Struk" → muncul **modal konfirmasi checkout**
+4. Isi info pelanggan (opsional) + pilih **metode pembayaran** (Tunai / QRIS)
+5. Konfirmasi → struk PNG ter-generate dan otomatis ter-download
+6. Stok item berkurang sesuai qty yang dibeli
+7. Item dengan stok 0 akan tampil **disabled/greyed out** dan tidak bisa diklik
+8. Jika stok tidak cukup → **error jelas ditampilkan**, transaksi tidak diproses (tidak ada silent clamp)
+
+**Form checkout (modal):**
+| Field | Tipe | Wajib? |
+|---|---|---|
+| Nama Pelanggan | Text | Tidak (opsional) |
+| Nomor HP / WhatsApp | Tel | Tidak (opsional) |
+| Metode Pembayaran | Radio (Tunai / QRIS) | Ya (default: Tunai) |
 
 ### 3.4 Struk PNG Generator
 
@@ -123,12 +132,16 @@ Tampilan utama kasir, diakses via tablet (mode landscape ideal).
 5. Tanggal & jam transaksi (WIB)
 6. Nomor transaksi unik
 7. Separator (───)
-8. Daftar item (nama, qty × harga satuan)
-9. Separator (───)
-10. Total keseluruhan (bold)
+8. Nama pelanggan (jika diisi)
+9. Nomor HP/WA pelanggan (jika diisi)
+10. Metode pembayaran (TUNAI / QRIS)
 11. Separator (───)
-12. Footer ucapan terima kasih
-13. Separator bawah (═══)
+12. Daftar item (nama, qty × harga satuan)
+13. Separator (───)
+14. Total keseluruhan (bold)
+15. Separator (───)
+16. Footer ucapan terima kasih
+17. Separator bawah (═══)
 
 **Delivery:**
 - Tidak dikirim ke WA
@@ -141,13 +154,14 @@ Tampilan utama kasir, diakses via tablet (mode landscape ideal).
 Akses khusus admin untuk memantau dan mengelola penjualan.
 
 **Halaman Riwayat Transaksi:**
-- Tabel daftar semua transaksi (nomor urut, waktu, item yang dibeli, total)
+- Tabel daftar semua transaksi (nomor urut, event, **metode pembayaran**, waktu, total)
 - Filter berdasarkan event
 - Filter berdasarkan tanggal
 - Menampilkan maksimal 200 transaksi terbaru (ada notifikasi jika data terpotong)
 - Klik **"Lihat"** → buka modal detail transaksi
 
 **Modal Detail Transaksi:**
+- Tampilkan: nama pelanggan (jika ada), nomor HP/WA (jika ada), **metode pembayaran**
 - Tampilkan detail item + total
 - Tombol **"Edit Struk"**: ubah qty per item
   - Set qty ke 0 → item dihapus dari struk
@@ -162,6 +176,7 @@ Akses khusus admin untuk memantau dan mengelola penjualan.
   - Total omset hari itu
   - Jumlah transaksi
   - Rata-rata transaksi
+  - **Breakdown metode pembayaran: Tunai vs QRIS** (jumlah transaksi + omset masing-masing)
   - Top 5 item terlaris
 - Bisa filter per event
 
@@ -287,7 +302,7 @@ GET  /struk/{filename}              → Download file PNG struk
 
 ## 10. Batasan (Out of Scope)
 
-- ❌ Integrasi pembayaran (QRIS, kartu, tunai)
+- ❌ Integrasi pembayaran otomatis (gateway QRIS, kartu)
 - ❌ Koneksi ke printer thermal
 - ❌ Kirim struk via WhatsApp
 - ❌ Pajak (PPN/service charge)

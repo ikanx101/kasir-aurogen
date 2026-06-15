@@ -38,6 +38,9 @@ class Transaction(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     total = Column(Integer, nullable=False)
     struk_path = Column(String, nullable=True)
+    customer_name = Column(String, nullable=True)
+    customer_phone = Column(String, nullable=True)
+    payment_method = Column(String, nullable=True)  # "tunai" or "qris"
 
     event = relationship("Event", back_populates="transactions")
     items = relationship("TransactionItem", back_populates="transaction", cascade="all, delete-orphan")

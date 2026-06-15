@@ -103,6 +103,9 @@ async def rekap_page(
                 .all()
             )
 
+            tunai_txs = [t for t in day_txs if (t.payment_method or "tunai") == "tunai"]
+            qris_txs = [t for t in day_txs if (t.payment_method or "tunai") == "qris"]
+
             recap_data = {
                 "omset": omset,
                 "n_tx": n_tx,
@@ -111,6 +114,10 @@ async def rekap_page(
                     {"name": r.item_name, "qty": r.total_qty, "revenue": r.total_revenue}
                     for r in top_items
                 ],
+                "tunai_count": len(tunai_txs),
+                "tunai_total": sum(t.total for t in tunai_txs),
+                "qris_count": len(qris_txs),
+                "qris_total": sum(t.total for t in qris_txs),
             }
         except ValueError:
             pass
@@ -144,6 +151,9 @@ async def transaction_detail(tx_id: int, request: Request, db: Session = Depends
         "event_name": tx.event.name if tx.event else "(event dihapus)",
         "created_at": tx.created_at.strftime("%d/%m/%Y %H:%M"),
         "total": tx.total,
+        "customer_name": tx.customer_name or "",
+        "customer_phone": tx.customer_phone or "",
+        "payment_method": tx.payment_method or "tunai",
         "items": [
             {
                 "id": i.id,
