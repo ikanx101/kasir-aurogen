@@ -157,9 +157,7 @@ def generate_struk(
         nonlocal y
         line = char * 42
         f = font_total if bold else font_item
-        left_off, w = text_bbox_info(line, f)
-        x = (WIDTH * SCALE - w) // 2 - left_off
-        draw.text((x, y), line, font=f, fill=BORDER_COLOR)
+        draw.text((PAD_X, y), line, font=f, fill=BORDER_COLOR)
         y += LINE_H + 4 * SCALE
 
     def draw_item_row(name, price_str, sub_str):
